@@ -1,0 +1,4 @@
+[Project]
+Name=trade_connector
+Manager=KDevCMakeManager
+VersionControl=kdevgit
