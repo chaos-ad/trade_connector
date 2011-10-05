@@ -69,8 +69,14 @@ void client::handle_read_data(boost::system::error_code err)
 {
     throw_error(err);
 	std::string command(recv_buffer.data(), recv_buffer.size());
-	std::string result(transaq::wrapper::send_command(command));
-    service.post(boost::bind(&client::write, this, result));
+    if (command == "PING")
+    {
+        write("PONG");
+    }
+    else
+    {
+        write( transaq::wrapper::send_command(command) );
+    }
     start_read();
 }
 
