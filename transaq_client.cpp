@@ -4,6 +4,8 @@
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
 
+#include <iostream>
+
 namespace
 {
     void throw_error(const boost::system::error_code& err)
@@ -20,10 +22,12 @@ namespace transaq {
 
 
 client::client(const std::string& host, const std::string& port, std::string const& path)
-    : service()
-    , send_size(0)
+    : send_size(0)
     , recv_size(0)
     , socket(service)
+    #ifdef HANDLE_SIGNALS
+    , signals(service, SIGINT, SIGTERM)
+    #endif
 {
     boost::asio::ip::tcp::resolver::query query(host, port);
     boost::asio::ip::tcp::resolver resolver(service);
@@ -31,7 +35,17 @@ client::client(const std::string& host, const std::string& port, std::string con
     socket.connect(*resolver.resolve(query));
 
     wrapper::start(boost::bind(&client::handle_data, this, _1), path);
+
+    #ifdef HANDLE_SIGNALS
+    signals.async_wait(boost::bind(&client::handle_signal, this, _1, _2));
+    #endif
+
     start_read();
+}
+
+client::~client()
+{
+    wrapper::stop();
 }
 
 void client::start()
@@ -68,7 +82,7 @@ void client::handle_read_size(boost::system::error_code err)
 void client::handle_read_data(boost::system::error_code err)
 {
     throw_error(err);
-	std::string command(recv_buffer.data(), recv_buffer.size());
+    std::string command(recv_buffer.data(), recv_buffer.size());
     if (command == "PING")
     {
         write("PONG");
@@ -80,10 +94,19 @@ void client::handle_read_data(boost::system::error_code err)
     start_read();
 }
 
+// called from transaq thread:
 bool client::handle_data(std::string const& data)
 {
     service.post(boost::bind(&client::write, this, data));
     return true;
+}
+
+void client::handle_signal(boost::system::error_code const& err, int signal_number)
+{
+    if(!err)
+    {
+        stop();
+    }
 }
 
 void client::write(std::string const& data)

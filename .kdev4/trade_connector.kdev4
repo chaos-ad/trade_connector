@@ -1,11 +1,11 @@
 [Buildset]
-BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x1e\x00t\x00r\x00a\x00d\x00e\x00_\x00c\x00o\x00n\x00n\x00e\x00c\x00t\x00o\x00r)
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
 
 [CMake]
-BuildDirs=/home/chaos/Projects/trade_connector/build
+BuildDirs=/home/chaos/Projects/trade/trade_connector/build
 CMakeDir=/usr/share/cmake-2.8/Modules
 Current CMake Binary=file:///usr/bin/cmake
-CurrentBuildDir=file:///home/chaos/Projects/trade_connector/build
+CurrentBuildDir=file:///home/chaos/Projects/trade/trade_connector/build
 CurrentBuildType=Debug
 CurrentInstallDir=
 Extra Arguments=
