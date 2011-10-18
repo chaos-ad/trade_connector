@@ -8,6 +8,7 @@ add_executable(trade_connector
     transaq_wrapper.cpp
     transaq_client.cpp
     transaq_loader_stub.cpp
+    logger.cpp
     main.cpp)
 
 target_link_libraries(trade_connector ${Boost_LIBRARIES})

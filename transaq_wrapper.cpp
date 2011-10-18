@@ -42,6 +42,7 @@ public :
             throw std::runtime_error("wrapper is not running");
         }
     }
+
     static void start(const callback_t& callback, std::string const& path)
     {
         if(!instance().get()) {

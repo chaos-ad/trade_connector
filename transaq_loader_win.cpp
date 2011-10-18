@@ -14,9 +14,10 @@ void* load_library(std::string const& path)
     return static_cast<void*>(module);
 }
 
-void  unload_library(void * library)
+void unload_library(void * library)
 {
-    FreeLibrary(static_cast<HMODULE>(library));
+	// do not unload dll explicitly, since it hangs
+    // FreeLibrary(static_cast<HMODULE>(library));
 }
 
 void* load_function(void * library, std::string const& name)

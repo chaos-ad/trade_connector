@@ -1,3 +1,4 @@
+#include "logger.h"
 #include "transaq_client.h"
 #include "transaq_wrapper.h"
 
@@ -6,12 +7,21 @@
 
 #include <iostream>
 
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time_io.hpp>
+
+boost::posix_time::ptime get_time()
+{
+    return boost::posix_time::second_clock::local_time();
+}
+
 namespace
 {
     void throw_error(const boost::system::error_code& err)
     {
         if (err)
         {
+			std::clog << get_time() << ": Error: " << err.message() << std::endl;
             boost::system::system_error e(err);
             boost::throw_exception(e);
         }
@@ -21,7 +31,13 @@ namespace
 namespace transaq {
 
 
-client::client(const std::string& host, const std::string& port, std::string const& path)
+client::client
+(
+    std::string const& host,
+    std::string const& port,
+    std::string const& libpath,
+    std::string const& logfile
+)
     : send_size(0)
     , recv_size(0)
     , socket(service)
@@ -34,7 +50,12 @@ client::client(const std::string& host, const std::string& port, std::string con
     boost::asio::ip::tcp::endpoint endpoint;
     socket.connect(*resolver.resolve(query));
 
-    wrapper::start(boost::bind(&client::handle_data, this, _1), path);
+    if (!logfile.empty())
+    {
+        logger::install(logfile, true);
+    }
+
+    wrapper::start(boost::bind(&client::handle_data, this, _1), libpath);
 
     #ifdef HANDLE_SIGNALS
     signals.async_wait(boost::bind(&client::handle_signal, this, _1, _2));
@@ -46,6 +67,7 @@ client::client(const std::string& host, const std::string& port, std::string con
 client::~client()
 {
     wrapper::stop();
+    logger::uninstall();
 }
 
 void client::start()
@@ -82,16 +104,10 @@ void client::handle_read_size(boost::system::error_code err)
 void client::handle_read_data(boost::system::error_code err)
 {
     throw_error(err);
-    std::string command(recv_buffer.data(), recv_buffer.size());
-    if (command == "PING")
-    {
-        write("PONG");
-    }
-    else
-    {
-        write( transaq::wrapper::send_command(command) );
-    }
-    start_read();
+	std::string command(recv_buffer.data(), recv_buffer.size());
+    std::clog << get_time() << ": Sending command:" << std::endl << command << std::endl << std::endl;
+	write( transaq::wrapper::send_command(command) );
+	start_read();
 }
 
 // called from transaq thread:

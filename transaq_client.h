@@ -13,7 +13,13 @@ namespace transaq
     class client
     {
     public :
-        client(std::string const& host, std::string const& port, std::string const& path);
+        client
+        (
+            std::string const& host,
+            std::string const& port,
+            std::string const& libpath,
+            std::string const& logfile
+        );
         ~client();
 
         void start();
