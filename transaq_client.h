@@ -2,11 +2,9 @@
 
 #include <deque>
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 #include <boost/asio/ip/tcp.hpp>
-
-#ifdef HANDLE_SIGNALS
-    #include <boost/asio/signal_set.hpp>
-#endif
+#include <boost/asio/signal_set.hpp>
 
 namespace transaq
 {
@@ -18,6 +16,8 @@ namespace transaq
             std::string const& host,
             std::string const& port,
             std::string const& libpath,
+            std::string const& keyfile,
+            std::string const& certfile,
             std::string const& logfile
         );
         ~client();
@@ -38,6 +38,10 @@ namespace transaq
         void handle_write(boost::system::error_code err);
 
     private :
+        typedef boost::asio::ip::tcp::socket        socket_t;
+        typedef boost::asio::ssl::stream<socket_t>  ssl_socket_t;
+
+    private :
         uint32_t                        recv_size;
         std::vector<char>               recv_buffer;
 
@@ -45,10 +49,8 @@ namespace transaq
         std::deque<std::string>         send_buffer;
 
         boost::asio::io_service         service;
-        boost::asio::ip::tcp::socket    socket;
-
-        #ifdef HANDLE_SIGNALS
-        boost::asio::signal_set         signals;
-        #endif
+        boost::asio::ssl::context       context;
+        boost::shared_ptr<ssl_socket_t> socket;
+        boost::asio::signal_set         sigset;
     };
 }

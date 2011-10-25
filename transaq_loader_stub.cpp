@@ -121,6 +121,7 @@ void* load_function(void * library, std::string const& name)
     {
         return reinterpret_cast<void*>(set_callback);
     }
+    return 0;
 }
 
 } // namespace loader

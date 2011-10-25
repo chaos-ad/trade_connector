@@ -2,13 +2,12 @@
 #include "transaq_client.h"
 #include "transaq_wrapper.h"
 
+#include <iostream>
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
-
-#include <iostream>
-
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
+
 
 boost::posix_time::ptime get_time()
 {
@@ -36,31 +35,43 @@ client::client
     std::string const& host,
     std::string const& port,
     std::string const& libpath,
+    std::string const& keyfile,
+    std::string const& certfile,
     std::string const& logfile
 )
     : send_size(0)
     , recv_size(0)
-    , socket(service)
-    #ifdef HANDLE_SIGNALS
-    , signals(service, SIGINT, SIGTERM)
-    #endif
+    , context(boost::asio::ssl::context::sslv3)
+    , sigset(service, SIGINT, SIGTERM)
 {
-    boost::asio::ip::tcp::resolver::query query(host, port);
-    boost::asio::ip::tcp::resolver resolver(service);
-    boost::asio::ip::tcp::endpoint endpoint;
-    socket.connect(*resolver.resolve(query));
-
     if (!logfile.empty())
     {
         logger::install(logfile, true);
     }
 
+    boost::asio::ssl::verify_mode mode =
+        boost::asio::ssl::verify_peer &
+        boost::asio::ssl::verify_fail_if_no_peer_cert;
+
+    context.set_verify_mode(mode);
+    context.use_private_key_file(keyfile, boost::asio::ssl::context::pem);
+    context.use_certificate_file(certfile, boost::asio::ssl::context::pem);
+
+    std::clog << get_time() << ": Using private key: " << keyfile  << std::endl;
+    std::clog << get_time() << ": Using certificate: " << certfile << std::endl;
+    std::clog << get_time() << ": Connecting to host " << host << ":" << port << "..." << std::endl;
+
+    socket.reset(new ssl_socket_t(service, context));
+
+    boost::asio::ip::tcp::resolver::query query(host, port);
+    boost::asio::ip::tcp::resolver resolver(service);
+    boost::asio::connect(socket->lowest_layer(), resolver.resolve(query));
+    socket->handshake(boost::asio::ssl::stream_base::client);
+
+    std::clog << get_time() << ": Connected" << std::endl;
+
     wrapper::start(boost::bind(&client::handle_data, this, _1), libpath);
-
-    #ifdef HANDLE_SIGNALS
-    signals.async_wait(boost::bind(&client::handle_signal, this, _1, _2));
-    #endif
-
+    sigset.async_wait(boost::bind(&client::handle_signal, this, _1, _2));
     start_read();
 }
 
@@ -82,8 +93,9 @@ void client::stop()
 
 void client::start_read()
 {
-    socket.async_receive
+    boost::asio::async_read
     (
+        *socket,
         boost::asio::buffer(&recv_size, sizeof(recv_size)),
         boost::bind(&client::handle_read_size, this, _1)
     );
@@ -94,8 +106,9 @@ void client::handle_read_size(boost::system::error_code err)
     throw_error(err);
     recv_size = ntohl(recv_size);
     recv_buffer.resize(recv_size, 0);
-    socket.async_receive
+    boost::asio::async_read
     (
+        *socket,
         boost::asio::buffer(recv_buffer),
         boost::bind(&client::handle_read_data, this, _1)
     );
@@ -139,8 +152,9 @@ void client::start_write()
         boost::array<boost::asio::const_buffer, 2> buffers;
         buffers[0] = boost::asio::buffer(&send_size, sizeof(send_size));
         buffers[1] = boost::asio::buffer(send_buffer.front());
-        socket.async_send
+        boost::asio::async_write
         (
+            *socket,
             buffers,
             boost::bind(&client::handle_write, this, _1)
         );

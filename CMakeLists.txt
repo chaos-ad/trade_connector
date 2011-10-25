@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 project(trade_connector)
 
+SET(BOOST_ROOT "/usr/local/")
+SET(Boost_NO_SYSTEM_PATHS true)
 find_package(Boost 1.38 REQUIRED system thread)
 
 add_executable(trade_connector
@@ -11,5 +13,5 @@ add_executable(trade_connector
     logger.cpp
     main.cpp)
 
-target_link_libraries(trade_connector ${Boost_LIBRARIES})
+target_link_libraries(trade_connector ${Boost_LIBRARIES} ssl pthread)
 
